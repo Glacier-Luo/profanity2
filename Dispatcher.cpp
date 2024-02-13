@@ -9,6 +9,7 @@
 #include <random>
 #include <thread>
 #include <algorithm>
+#include <set>
 
 #if defined(__APPLE__) || defined(__MACOSX)
 #include <machine/endian.h>
@@ -433,17 +434,21 @@ void Dispatcher::dispatch(Device & d) {
 	OpenCLException::throwIfError("failed to set custom callback", res);
 }
 
+std::set<int> s;
+const int num = 7; // TODO
+
 void Dispatcher::handleResult(Device & d) {
-	for (auto i = PROFANITY_MAX_SCORE; i > m_clScoreMax; --i) {
+	for (auto i = PROFANITY_MAX_SCORE; i > num; --i) {
 		result & r = d.m_memResult[i];
 
-		if (r.found > 0 && i >= d.m_clScoreMax) {
-			d.m_clScoreMax = i;
+		if (r.found > 0 && i >= d.m_clScoreMax && s.count(r.foundId) == 0) {
+			s.insert(r.foundId);
+			d.m_clScoreMax = num;
 			CLMemory<cl_uchar>::setKernelArg(d.m_kernelScore, 4, d.m_clScoreMax);
 
 			std::lock_guard<std::mutex> lock(m_mutex);
-			if (i >= m_clScoreMax) {
-				m_clScoreMax = i;
+			if (i >= num) {
+				m_clScoreMax = num;
 
 				if (m_clScoreQuit && i >= m_clScoreQuit) {
 					m_quit = true;
